@@ -1,0 +1,45 @@
+services:
+  notification-db:
+    build:
+      context: ./scripts
+    container_name: notification-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: Password
+      POSTGRES_DB: notifications
+    ports:
+      - "5435:5432"
+    volumes:
+      - notif_pgdata:/var/lib/postgresql/data
+    networks:
+      - banking_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d notifications"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  notification-service:
+    build: .
+    container_name: notification-service
+    depends_on:
+      notification-db:
+        condition: service_healthy
+    environment:
+      DB_HOST: notification-db
+      DB_PORT: 5432
+      DB_USER: admin
+      DB_PASSWORD: Password
+      DB_NAME: notifications
+      RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+    ports:
+      - "3003:3003"
+    networks:
+      - banking_network
+
+volumes:
+  notif_pgdata:
+
+networks:
+  banking_network:
+    external: true
